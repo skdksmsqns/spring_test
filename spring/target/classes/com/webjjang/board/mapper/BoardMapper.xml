@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 일반게시판 쿼리 Mapper -->
+<!-- 작성일 : 2021-06-25 -->
+
+<mapper namespace="com.webjjang.board.mapper.BoardMapper">
+	
+	<!-- 게시판 리스트 : select -->
+	<select id="list" resultType="com.webjjang.board.vo.BoardVO">
+	SELECT * FROM (
+		SELECT ROWNUM rnum,no,title, content, writer,writeDate,hit
+		FROM (
+			SELECT no,title, content, writer,writeDate,hit
+			FROM board
+			<include refid="search"/>
+			ORDER BY no DESC
+			)
+	)		
+	WHERE rnum BETWEEN #{startRow} AND #{endRow}
+	</select>
+
+	<!-- 전체 데이터의 갯수를 구하는 쿼미 -->
+	<select id="getCount" resultType="Integer">
+		SELECT COUNT(*) 
+		FROM board
+		<include refid="search"/>
+	</select>
+	
+	<sql id="search">
+	<!-- 검색어가 존재하는 경우에만 검색을 실행함 : mybatis 문서 참조 -->
+	<if test="word != null and word != ''.toString() ">
+		WHERE ( 2 = 1 <!-- 형식을 맞추기 위한 false. or 연산시 -->
+		<!--mybatis에서 2글자 이상인 경우 : String 취급, 한 글자인 경우:char 취급 => toString()를 이용해서 문자열로 만듬 -->
+		<if test="key == 't'.toString()">
+			<!-- concat(문자열, 문자열) : 2개만 연결, "||" : 문자열 이어 붙이는 연산자 -->
+			or title like '%'||#{word}||'%'
+		</if>
+		<if test="key == 'c'.toString()">
+			or content like '%'||#{word}||'%'
+		</if>
+		<if test="key == 'w'.toString()">
+			or writer like '%'||#{word}||'%'
+		</if>
+		<if test="key == 'tc'.toString()">
+			or title like '%'||#{word}||'%'
+			or content like '%'||#{word}||'%'
+		</if>
+		<if test="key == 'tw'.toString()">
+			or title like '%'||#{word}||'%'
+			or writer like '%'||#{word}||'%'
+		</if>
+		<if test="key == 'cw'.toString()">
+			or content like '%'|| #{word} || '%'
+			or writer like '%'||#{word}||'%'
+		</if>
+		<if test="key == 'tcw'">
+			or title like '%'||#{word}||'%'
+			or content like '%'||#{word}||'%'
+			or writer like '%'||#{word}||'%'
+		</if>
+		)
+	</if>
+</sql>
+	
+	<!-- 게시판 글 상세보기 -->
+	<select id="view" resultType="com.webjjang.board.vo.BoardVO">
+		SELECT no,title,content,writer,writeDate,hit
+		FROM board
+		WHERE no = #{no}
+	</select>
+	
+	<!-- 조회수 1 증가 -->
+	<update id="increas">
+		UPDATE board
+		SET hit = hit + 1
+		WHERE no = #{no}
+	</update>
+	
+		<!-- 게시판 글쓰기 -->
+	<insert id="write">
+		INSERT INTO board(no, title, content, writer, pw)
+		VALUES(board_seq.nextval, #{title}, #{content}, #{writer}, #{pw})
+	</insert>
+
+	<!-- 게시판 글수정 -->
+	<update id="update">
+		UPDATE board 
+		SET title = #{title}, content=#{content}, writer=#{writer}
+		WHERE no = #{no} AND pw = #{pw}
+	</update>
+
+	<!-- 게시판 글삭제 -->
+	<delete id="delete">
+		DELETE FROM board
+		WHERE no = #{no} AND pw = #{pw}
+	</delete>
+	
+</mapper>
